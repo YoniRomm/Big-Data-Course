@@ -14,6 +14,8 @@ import com.datastax.oss.driver.api.core.CqlSession;
 import bigdatacourse.hw2.HW2API;
 import com.datastax.oss.driver.api.core.cql.BoundStatement;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
+import com.datastax.oss.driver.api.core.cql.ResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
 
 public class HW2StudentAnswer implements HW2API {
 
@@ -23,11 +25,29 @@ public class HW2StudentAnswer implements HW2API {
     private static final String TABLE_REVIEWS_BY_REVIEWER_ID_NAME = "reviews_by_reviewer_id";
     private static final String TABLE_ITEMS_NAME = "items";
 
+    private static final String CQL_ITEMS_INSERT =
+            "INSERT INTO " + TABLE_ITEMS_NAME + "(asin, title, image, categories, description) VALUES(?, ?, ?, ?, ?)";
+
+    private static final String CQL_ITEMS_SELECT =
+            "SELECT * FROM " + TABLE_ITEMS_NAME + " WHERE asin = ?";
+
+    private static final String CQL_REVIEWS_BY_ASIN_INSERT =
+            "INSERT INTO " + TABLE_REVIEWS_BY_ASIN_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String CQL_REVIEWS_BY_ASIN_SELECT =
+            "SELECT * FROM " + TABLE_REVIEWS_BY_ASIN_NAME + " WHERE user_id = ?";
+
+    private static final String CQL_REVIEWS_BY_REVIEWER_ID_INSERT =
+            "INSERT INTO " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String CQL_REVIEWS_BY_REVIEWER_ID_SELECT =
+            "SELECT * FROM " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + " WHERE user_id = ?";
+
     // CQL stuff
 
     private static final String CQL_CREATE_TABLE_ITEMS =
             "CREATE TABLE " + TABLE_ITEMS_NAME + "(" +
-                    "asin bigint," +
+                    "asin text," +
                     "title text," +
                     "image text," +
                     "categories set," +
@@ -37,7 +57,7 @@ public class HW2StudentAnswer implements HW2API {
 
     private static final String TABLE_REVIEWS_COLUMNS =
             "time timestamp," +
-                    "asin bigint," +
+                    "asin text," +
                     "reviewerID text," +
                     "reviewerName int," +
                     "rating int," +
@@ -58,28 +78,10 @@ public class HW2StudentAnswer implements HW2API {
                     ") " +
                     "WITH CLUSTERING ORDER BY (time DESC);";
 
-    // userReviews by review id
-    // itemReviews by asin
-
     // cassandra session
     private CqlSession session;
-    private static final String CQL_ITEMS_INSERT =
-            "INSERT INTO " + TABLE_ITEMS_NAME + "(asin, title, image, categories, description) VALUES(?, ?, ?, ?, ?)";
 
-    private static final String CQL_ITEMS_SELECT =
-            "SELECT * FROM " + TABLE_ITEMS_NAME + " WHERE asin = ?";
-
-    private static final String CQL_REVIEWS_BY_ASIN_INSERT =
-            "INSERT INTO " + TABLE_REVIEWS_BY_ASIN_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
-
-    private static final String CQL_REVIEWS_BY_ASIN_SELECT =
-            "SELECT * FROM " + TABLE_REVIEWS_BY_ASIN_NAME + " WHERE user_id = ?";
-
-    private static final String CQL_REVIEWS_BY_REVIEWER_ID_INSERT =
-            "INSERT INTO " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
-
-    private static final String CQL_REVIEWS_BY_REVIEWER_ID_SELECT =
-            "SELECT * FROM " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + " WHERE user_id = ?";
+    // prepared statements
 
     private PreparedStatement pstmtItemsInsert;
     private PreparedStatement pstmtReviewsByAsinInsert;
@@ -87,10 +89,6 @@ public class HW2StudentAnswer implements HW2API {
     private PreparedStatement pstmtItemsSelect;
     private PreparedStatement pstmtReviewsByAsinSelect;
     private PreparedStatement pstmtReviewsByIdSelect;
-
-
-    // prepared statements
-    //TODO: add here prepared statements variables
 
 
     @Override
@@ -155,15 +153,14 @@ public class HW2StudentAnswer implements HW2API {
         ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
 
         for (int i = 0; i < count; i++) {
-            final int x = i;
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
                     BoundStatement bstmt = pstmtItemsInsert.bind()
-                            .setBigInteger(0, BigInteger.valueOf(123)) // asin
+                            .setString(0, "") // asin
                             .setString(1, "") // title
                             .setString(2, "") // image
-//                            .setSet(3, null) // categories
+//                            .setSet(3, null) // categories // TODO: finish here
                             .setString(4, ""); // description
 
                     session.execute(bstmt);
@@ -174,9 +171,6 @@ public class HW2StudentAnswer implements HW2API {
         executor.awaitTermination(1, TimeUnit.HOURS);
     }
 
-    // (asin, title, image, categories, description)
-
-
     @Override
     public void loadReviews(String pathReviewsFile) throws Exception {
         //TODO: implement this function
@@ -185,86 +179,122 @@ public class HW2StudentAnswer implements HW2API {
 
     @Override
     public void item(String asin) {
-        //TODO: implement this function
-        System.out.println("TODO: implement this function...");
+        ResultSet rs = session.execute(CQL_ITEMS_SELECT, asin);
+        Row row = rs.one();
 
-        // required format - example for asin B005QB09TU
-        System.out.println("asin: " + "B005QB09TU");
-        System.out.println("title: " + "Circa Action Method Notebook");
-        System.out.println("image: " + "http://ecx.images-amazon.com/images/I/41ZxT4Opx3L._SY300_.jpg");
-        System.out.println("categories: " + new HashSet<String>(Arrays.asList("Notebooks & Writing Pads", "Office & School Supplies", "Office Products", "Paper")));
-        System.out.println("description: " + "Circa + Behance = Productivity. The minute-to-minute flexibility of Circa note-taking meets the organizational power of the Action Method by Behance. The result is enhanced productivity, so you'll formulate strategies and achieve objectives even more efficiently with this Circa notebook and project planner. Read Steve's blog on the Behance/Levenger partnership Customize with your logo. Corporate pricing available. Please call 800-357-9991.");
-        ;
+        if (row == null) {
+            System.out.println("not exists");
+        } else {
+            System.out.println("asin: " + row.getString(0));
+            System.out.println("title: " + row.getString(1));
+            System.out.println("image: " + row.getString(2));
+//            System.out.println("categories: " + row.getSet(3)); // TODO: finish here
+            System.out.println("description: " + row.getString(4));
+        }
 
-        // required format - if the asin does not exists return this value
-        System.out.println("not exists");
+
+//        // required format - example for asin B005QB09TU
+//        System.out.println("asin: " + "B005QB09TU");
+//        System.out.println("title: " + "Circa Action Method Notebook");
+//        System.out.println("image: " + "http://ecx.images-amazon.com/images/I/41ZxT4Opx3L._SY300_.jpg");
+//        System.out.println("categories: " + new HashSet<String>(Arrays.asList("Notebooks & Writing Pads", "Office & School Supplies", "Office Products", "Paper")));
+//        System.out.println("description: " + "Circa + Behance = Productivity. The minute-to-minute flexibility of Circa note-taking meets the organizational power of the Action Method by Behance. The result is enhanced productivity, so you'll formulate strategies and achieve objectives even more efficiently with this Circa notebook and project planner. Read Steve's blog on the Behance/Levenger partnership Customize with your logo. Corporate pricing available. Please call 800-357-9991.");
+//        ;
+//
+//        // required format - if the asin does not exists return this value
+//        System.out.println("not exists");
     }
 
 
     @Override
     public void userReviews(String reviewerID) {
-        //TODO: implement this function
-        System.out.println("TODO: implement this function...");
+        ResultSet rs = session.execute(CQL_REVIEWS_BY_REVIEWER_ID_SELECT, reviewerID);
+        Row row = rs.one();
+        int count = 0;
+        while (row != null) {
+            printReview(row);
+            row = rs.one();
+            count++;
+        }
 
+        System.out.println("total reviews: " + count);
 
         // required format - example for reviewerID A17OJCRPMYWXWV
-        System.out.println(
-                "time: " + Instant.ofEpochSecond(1362614400) +
-                        ", asin: " + "B005QDG2AI" +
-                        ", reviewerID: " + "A17OJCRPMYWXWV" +
-                        ", reviewerName: " + "Old Flour Child" +
-                        ", rating: " + 5 +
-                        ", summary: " + "excellent quality" +
-                        ", reviewText: " + "These cartridges are excellent .  I purchased them for the office where I work and they perform  like a dream.  They are a fraction of the price of the brand name cartridges.  I will order them again!");
-
-        System.out.println(
-                "time: " + Instant.ofEpochSecond(1360108800) +
-                        ", asin: " + "B003I89O6W" +
-                        ", reviewerID: " + "A17OJCRPMYWXWV" +
-                        ", reviewerName: " + "Old Flour Child" +
-                        ", rating: " + 5 +
-                        ", summary: " + "Checkbook Cover" +
-                        ", reviewText: " + "Purchased this for the owner of a small automotive repair business I work for.  The old one was being held together with duct tape.  When I saw this one on Amazon (where I look for almost everything first) and looked at the price, I knew this was the one.  Really nice and very sturdy.");
-
-        System.out.println("total reviews: " + 2);
+//        System.out.println(
+//                "time: " + Instant.ofEpochSecond(1362614400) +
+//                        ", asin: " + "B005QDG2AI" +
+//                        ", reviewerID: " + "A17OJCRPMYWXWV" +
+//                        ", reviewerName: " + "Old Flour Child" +
+//                        ", rating: " + 5 +
+//                        ", summary: " + "excellent quality" +
+//                        ", reviewText: " + "These cartridges are excellent .  I purchased them for the office where I work and they perform  like a dream.  They are a fraction of the price of the brand name cartridges.  I will order them again!");
+//
+//        System.out.println(
+//                "time: " + Instant.ofEpochSecond(1360108800) +
+//                        ", asin: " + "B003I89O6W" +
+//                        ", reviewerID: " + "A17OJCRPMYWXWV" +
+//                        ", reviewerName: " + "Old Flour Child" +
+//                        ", rating: " + 5 +
+//                        ", summary: " + "Checkbook Cover" +
+//                        ", reviewText: " + "Purchased this for the owner of a small automotive repair business I work for.  The old one was being held together with duct tape.  When I saw this one on Amazon (where I look for almost everything first) and looked at the price, I knew this was the one.  Really nice and very sturdy.");
+//
+//        System.out.println("total reviews: " + 2);
     }
 
     @Override
     public void itemReviews(String asin) {
-        //TODO: implement this function
-        System.out.println("TODO: implement this function...");
+        ResultSet rs = session.execute(CQL_REVIEWS_BY_ASIN_SELECT, asin);
+        Row row = rs.one();
+        int count = 0;
+        while (row != null) {
+            printReview(row);
+            row = rs.one();
+            count++;
+        }
+
+        System.out.println("total reviews: " + count);
 
 
         // required format - example for asin B005QDQXGQ
-        System.out.println(
-                "time: " + Instant.ofEpochSecond(1391299200) +
-                        ", asin: " + "B005QDQXGQ" +
-                        ", reviewerID: " + "A1I5J5RUJ5JB4B" +
-                        ", reviewerName: " + "T. Taylor \"jediwife3\"" +
-                        ", rating: " + 5 +
-                        ", summary: " + "Play and Learn" +
-                        ", reviewText: " + "The kids had a great time doing hot potato and then having to answer a question if they got stuck with the &#34;potato&#34;. The younger kids all just sat around turnin it to read it.");
-
-        System.out.println(
-                "time: " + Instant.ofEpochSecond(1390694400) +
-                        ", asin: " + "B005QDQXGQ" +
-                        ", reviewerID: " + "AF2CSZ8IP8IPU" +
-                        ", reviewerName: " + "Corey Valentine \"sue\"" +
-                        ", rating: " + 1 +
-                        ", summary: " + "Not good" +
-                        ", reviewText: " + "This Was not worth 8 dollars would not recommend to others to buy for kids at that price do not buy");
-
-        System.out.println(
-                "time: " + Instant.ofEpochSecond(1388275200) +
-                        ", asin: " + "B005QDQXGQ" +
-                        ", reviewerID: " + "A27W10NHSXI625" +
-                        ", reviewerName: " + "Beth" +
-                        ", rating: " + 2 +
-                        ", summary: " + "Way overpriced for a beach ball" +
-                        ", reviewText: " + "It was my own fault, I guess, for not thoroughly reading the description, but this is just a blow-up beach ball.  For that, I think it was very overpriced.  I thought at least I was getting one of those pre-inflated kickball-type balls that you find in the giant bins in the chain stores.  This did have a page of instructions for a few different games kids can play.  Still, I think kids know what to do when handed a ball, and there's a lot less you can do with a beach ball than a regular kickball, anyway.");
-
-        System.out.println("total reviews: " + 3);
+//        System.out.println(
+//                "time: " + Instant.ofEpochSecond(1391299200) +
+//                        ", asin: " + "B005QDQXGQ" +
+//                        ", reviewerID: " + "A1I5J5RUJ5JB4B" +
+//                        ", reviewerName: " + "T. Taylor \"jediwife3\"" +
+//                        ", rating: " + 5 +
+//                        ", summary: " + "Play and Learn" +
+//                        ", reviewText: " + "The kids had a great time doing hot potato and then having to answer a question if they got stuck with the &#34;potato&#34;. The younger kids all just sat around turnin it to read it.");
+//
+//        System.out.println(
+//                "time: " + Instant.ofEpochSecond(1390694400) +
+//                        ", asin: " + "B005QDQXGQ" +
+//                        ", reviewerID: " + "AF2CSZ8IP8IPU" +
+//                        ", reviewerName: " + "Corey Valentine \"sue\"" +
+//                        ", rating: " + 1 +
+//                        ", summary: " + "Not good" +
+//                        ", reviewText: " + "This Was not worth 8 dollars would not recommend to others to buy for kids at that price do not buy");
+//
+//        System.out.println(
+//                "time: " + Instant.ofEpochSecond(1388275200) +
+//                        ", asin: " + "B005QDQXGQ" +
+//                        ", reviewerID: " + "A27W10NHSXI625" +
+//                        ", reviewerName: " + "Beth" +
+//                        ", rating: " + 2 +
+//                        ", summary: " + "Way overpriced for a beach ball" +
+//                        ", reviewText: " + "It was my own fault, I guess, for not thoroughly reading the description, but this is just a blow-up beach ball.  For that, I think it was very overpriced.  I thought at least I was getting one of those pre-inflated kickball-type balls that you find in the giant bins in the chain stores.  This did have a page of instructions for a few different games kids can play.  Still, I think kids know what to do when handed a ball, and there's a lot less you can do with a beach ball than a regular kickball, anyway.");
+//
+//        System.out.println("total reviews: " + 3);
     }
 
-
+    public void printReview(Row row) {
+        //TODO: change time
+        System.out.println(
+                "time: " + Instant.ofEpochSecond(1362614400) +
+                        ", asin: " + row.getString(1) +
+                        ", reviewerID: " + row.getString(2) +
+                        ", reviewerName: " + row.getString(3) +
+                        ", rating: " + row.getInt(4) +
+                        ", summary: " + row.getString(5) +
+                        ", reviewText: " + row.getString(6));
+    }
 }
