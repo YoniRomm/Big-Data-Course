@@ -41,13 +41,13 @@ public class HW2StudentAnswer implements HW2API {
             "INSERT INTO " + TABLE_REVIEWS_BY_ASIN_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
 
     private static final String CQL_REVIEWS_BY_ASIN_SELECT =
-            "SELECT * FROM " + TABLE_REVIEWS_BY_ASIN_NAME + " WHERE user_id = ?";
+            "SELECT * FROM " + TABLE_REVIEWS_BY_ASIN_NAME + " WHERE asin = ?";
 
     private static final String CQL_REVIEWS_BY_REVIEWER_ID_INSERT =
             "INSERT INTO " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
 
     private static final String CQL_REVIEWS_BY_REVIEWER_ID_SELECT =
-            "SELECT * FROM " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + " WHERE user_id = ?";
+            "SELECT * FROM " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + " WHERE reviewerID = ?";
 
     // CQL stuff
 
@@ -209,7 +209,10 @@ public class HW2StudentAnswer implements HW2API {
 
     @Override
     public void item(String asin) {
-        ResultSet rs = session.execute(CQL_ITEMS_SELECT, asin);
+        BoundStatement bstmt = pstmtItemsSelect.bind()
+                .setString(0, asin);
+
+        ResultSet rs = session.execute(bstmt);
         Row row = rs.one();
 
         if (row == null) {
@@ -238,7 +241,10 @@ public class HW2StudentAnswer implements HW2API {
 
     @Override
     public void userReviews(String reviewerID) {
-        ResultSet rs = session.execute(CQL_REVIEWS_BY_REVIEWER_ID_SELECT, reviewerID);
+        BoundStatement bstmt = pstmtReviewsByIdSelect.bind()
+                .setString(0, reviewerID);
+
+        ResultSet rs = session.execute(bstmt);
         Row row = rs.one();
         int count = 0;
         while (row != null) {
@@ -273,7 +279,10 @@ public class HW2StudentAnswer implements HW2API {
 
     @Override
     public void itemReviews(String asin) {
-        ResultSet rs = session.execute(CQL_REVIEWS_BY_ASIN_SELECT, asin);
+        BoundStatement bstmt = pstmtReviewsByAsinSelect.bind()
+                .setString(0, asin);
+
+        ResultSet rs = session.execute(bstmt);
         Row row = rs.one();
         int count = 0;
         while (row != null) {
