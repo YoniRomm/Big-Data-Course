@@ -1,5 +1,6 @@
 package bigdatacourse.hw2.studentcode;
 
+import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Arrays;
@@ -23,8 +24,6 @@ public class HW2StudentAnswer implements HW2API {
     private static final String TABLE_ITEMS_NAME = "items";
 
     // CQL stuff
-    //TODO: add here create table and query designs
-
 
     private static final String CQL_CREATE_TABLE_ITEMS =
             "CREATE TABLE " + TABLE_ITEMS_NAME + "(" +
@@ -160,8 +159,14 @@ public class HW2StudentAnswer implements HW2API {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-					insertItem(session, pstmtItemsInsert, )
-                    System.out.println("version 3 - added " + x + "/" + count);
+                    BoundStatement bstmt = pstmtItemsInsert.bind()
+                            .setBigInteger(0, BigInteger.valueOf(123)) // asin
+                            .setString(1, "") // title
+                            .setString(2, "") // image
+//                            .setSet(3, null) // categories
+                            .setString(4, ""); // description
+
+                    session.execute(bstmt);
                 }
             });
         }
@@ -169,25 +174,7 @@ public class HW2StudentAnswer implements HW2API {
         executor.awaitTermination(1, TimeUnit.HOURS);
     }
 
-	// (asin, title, image, categories, description
-	public static void insertItem(CqlSession session, PreparedStatement pstmt,
-										 long user_id, long ts, long video_id, String device, int duration, boolean async) {
-
-		BoundStatement bstmt = pstmt.bind()
-				.setLong(0, 123)
-				.setInstant(1, Instant.ofEpochMilli(ts))			// NOTE - for timestamps we need to use Java's Instant
-				.setLong(2, video_id)
-				.setString(3, device)
-				.setInt(4, duration);
-
-		if (async)
-			session.executeAsync(bstmt);
-		else
-			session.execute(bstmt);
-	}
-
-
-
+    // (asin, title, image, categories, description)
 
 
     @Override
