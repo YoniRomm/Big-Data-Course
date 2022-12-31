@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -21,11 +22,72 @@ import com.datastax.oss.driver.api.core.cql.BoundStatement;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.datastax.oss.driver.api.core.cql.Row;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class HW2StudentAnswer implements HW2API {
 
+    public class Items {
+
+        private final JSONObject json;
+
+        public Items(JSONObject json) {
+            this.json = json;
+        }
+
+        public String getAsin() {
+            try {
+                return json.getString("asin");
+            } catch (JSONException e) {
+                return NOT_AVAILABLE_VALUE;
+            }
+        }
+
+        public String getTitle() {
+            try {
+                return json.getString("title");
+            } catch (JSONException e) {
+                return NOT_AVAILABLE_VALUE;
+            }
+        }
+
+        public String getImage() {
+            try {
+                return json.getString("imUrl");
+            } catch (JSONException e) {
+                return NOT_AVAILABLE_VALUE;
+            }
+        }
+
+        public Set<String> getCategories() {
+            try {
+                JSONArray arr = json.getJSONArray("categories");
+                arr = arr.getJSONArray(0);
+
+                ArrayList<String> list = new ArrayList<String>();
+                for (int i = 0; i < arr.length(); i++) {
+                    list.add(arr.getString(i));
+                }
+                return new HashSet<>(list);
+            } catch (JSONException e) {
+                return new HashSet<>();
+            }
+        }
+
+        public String getDescription() {
+            try {
+                return json.getString("description");
+            } catch (JSONException e) {
+                return NOT_AVAILABLE_VALUE;
+            }
+        }
+
+    }
+
     // general consts
+
+    private static final int MAX_THREADS = 250;
     public static final String NOT_AVAILABLE_VALUE = "na";
     private static final String TABLE_REVIEWS_BY_ASIN_NAME = "reviews_by_asin";
     private static final String TABLE_REVIEWS_BY_REVIEWER_ID_NAME = "reviews_by_reviewer_id";
@@ -35,7 +97,7 @@ public class HW2StudentAnswer implements HW2API {
             "INSERT INTO " + TABLE_ITEMS_NAME + "(asin, title, image, categories, description) VALUES(?, ?, ?, ?, ?)";
 
     private static final String CQL_ITEMS_SELECT =
-            "SELECT * FROM " + TABLE_ITEMS_NAME + " WHERE asin = ?";
+            "SELECT asin,title,image,categories,description FROM " + TABLE_ITEMS_NAME + " WHERE asin = ?";
 
     private static final String CQL_REVIEWS_BY_ASIN_INSERT =
             "INSERT INTO " + TABLE_REVIEWS_BY_ASIN_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
@@ -56,7 +118,7 @@ public class HW2StudentAnswer implements HW2API {
                     "asin text," +
                     "title text," +
                     "image text," +
-                    "categories set," +
+                    "categories set<text>," +
                     "description text," +
                     "PRIMARY KEY (asin)" +
                     ") ";
@@ -74,7 +136,7 @@ public class HW2StudentAnswer implements HW2API {
                     TABLE_REVIEWS_COLUMNS +
                     "PRIMARY KEY ((asin), time, reviewerID)" +
                     ") " +
-                    "WITH CLUSTERING ORDER BY (time DESC);";
+                    "WITH CLUSTERING ORDER BY (time DESC, reviewerID ASC)";
 
 
     private static final String CQL_CREATE_TABLE_REVIEWS_BY_REVIEWER_ID =
@@ -82,7 +144,7 @@ public class HW2StudentAnswer implements HW2API {
                     TABLE_REVIEWS_COLUMNS +
                     "PRIMARY KEY ((reviewerID), time, asin)" +
                     ") " +
-                    "WITH CLUSTERING ORDER BY (time DESC);";
+                    "WITH CLUSTERING ORDER BY (time DESC, asin ASC)";
 
     // cassandra session
     private CqlSession session;
@@ -136,7 +198,7 @@ public class HW2StudentAnswer implements HW2API {
         session.execute(CQL_CREATE_TABLE_ITEMS);
         session.execute(CQL_CREATE_TABLE_REVIEWS_BY_ASIN);
         session.execute(CQL_CREATE_TABLE_REVIEWS_BY_REVIEWER_ID);
-        System.out.printf("created tables: %s, %s, %s", TABLE_ITEMS_NAME, TABLE_REVIEWS_BY_REVIEWER_ID_NAME, TABLE_REVIEWS_BY_ASIN_NAME);
+        System.out.printf("created tables: %s, %s, %s\n", TABLE_ITEMS_NAME, TABLE_REVIEWS_BY_REVIEWER_ID_NAME, TABLE_REVIEWS_BY_ASIN_NAME);
     }
 
     @Override
@@ -151,25 +213,30 @@ public class HW2StudentAnswer implements HW2API {
 
     @Override
     public void loadItems(String pathItemsFile) throws Exception {
-        //TODO: implement this function
-        System.out.println("TODO: implement this function...");
-
-        int count = 10000;
-        int maxThreads = 250;
-
         // creating the thread factors
-        ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
+        ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
 
-        for (int i = 0; i < count; i++) {
+        ArrayList<JSONObject> reviews = parseData(pathItemsFile);
+
+        for (JSONObject json : reviews) {
+
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    BoundStatement bstmt = pstmtItemsInsert.bind()
-                            .setString(0, "") // asin
-                            .setString(1, "") // title
-                            .setString(2, "") // image
-//                            .setSet(3, null) // categories // TODO: finish here
-                            .setString(4, ""); // description
+//                    System.out.println("categories: " + new HashSet<String>(Arrays.asList("Notebooks & Writing Pads", "Office & School Supplies", "Office Products", "Paper")));
+                    Items item = new Items(json);
+
+                    BoundStatement bstmt = pstmtItemsInsert.bind(
+                            item.getAsin(),
+                            item.getTitle(),
+                            item.getImage(),
+                            item.getCategories(),
+                            item.getDescription());
+//                            .setString(0, json.getString("asin")) // asin
+//                            .setString(1, json.getString("title")) // title
+//                            .setString(2, json.getString("imUrl")) // image
+//                            .setSet(3, set, String) // categories
+//                            .setString(4, json.getString("description")); // description
 
                     session.execute(bstmt);
                 }
@@ -182,30 +249,29 @@ public class HW2StudentAnswer implements HW2API {
     @Override
     public void loadReviews(String pathReviewsFile) throws Exception {
         //TODO: implement this function
-		int count = 10000;
-		int maxThreads = 250;
+        int count = 10000;
         ArrayList<JSONObject> reviews = parseData(REVIEWS_PRODUCTS_PATH);
 
         // creating the thread factors
-		ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
+        ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
 
-		for (int i = 0; i < count; i++) {
-			final int x = i;
-			executor.execute(new Runnable() {
-				@Override
-				public void run() {
-					BoundStatement bstmt = pstmtReviewsByAsinInsert.bind()
-							.setLong(0, 123);
+        for (int i = 0; i < count; i++) {
+            final int x = i;
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    BoundStatement bstmt = pstmtReviewsByAsinInsert.bind()
+                            .setLong(0, 123);
 //							.setInstant(1, Instant.ofEpochMilli(ts))
 
-					session.execute(bstmt);
-					System.out.println("version 3 - added " + x + "/" + count);
-				}
-			});
-		}
-		executor.shutdown();
-		executor.awaitTermination(1, TimeUnit.HOURS);
-	}
+                    session.execute(bstmt);
+                    System.out.println("version 3 - added " + x + "/" + count);
+                }
+            });
+        }
+        executor.shutdown();
+        executor.awaitTermination(1, TimeUnit.HOURS);
+    }
 
     @Override
     public void item(String asin) {
@@ -221,7 +287,7 @@ public class HW2StudentAnswer implements HW2API {
             System.out.println("asin: " + row.getString(0));
             System.out.println("title: " + row.getString(1));
             System.out.println("image: " + row.getString(2));
-//            System.out.println("categories: " + row.getSet(3)); // TODO: finish here
+            System.out.println("categories: " + row.getSet(3, String.class));
             System.out.println("description: " + row.getString(4));
         }
 
@@ -336,12 +402,13 @@ public class HW2StudentAnswer implements HW2API {
                         ", summary: " + row.getString(5) +
                         ", reviewText: " + row.getString(6));
     }
+
     public static ArrayList<JSONObject> parseData(String file_path) {
         ArrayList<JSONObject> items = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(file_path))) {
             String line;
-            while((line = br.readLine()) != null)
-                items.add(new JSONObject(br.readLine()));
+            while ((line = br.readLine()) != null)
+                items.add(new JSONObject(line));
 
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
