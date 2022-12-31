@@ -326,7 +326,7 @@ public class HW2StudentAnswer implements HW2API {
                         ", summary: " + row.getString(5) +
                         ", reviewText: " + row.getString(6));
     }
-    public static void parseData(String file_path) {
+    public static ArrayList<JSONObject> parseData(String file_path) {
         ArrayList<JSONObject> items = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(file_path))) {
             String line;
@@ -338,6 +338,7 @@ public class HW2StudentAnswer implements HW2API {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        return items;
 
     }
 }
