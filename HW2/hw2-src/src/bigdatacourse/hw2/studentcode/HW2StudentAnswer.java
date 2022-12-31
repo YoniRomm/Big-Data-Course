@@ -1,8 +1,13 @@
 package bigdatacourse.hw2.studentcode;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
@@ -16,6 +21,7 @@ import com.datastax.oss.driver.api.core.cql.BoundStatement;
 import com.datastax.oss.driver.api.core.cql.PreparedStatement;
 import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.datastax.oss.driver.api.core.cql.Row;
+import org.json.JSONObject;
 
 public class HW2StudentAnswer implements HW2API {
 
@@ -90,6 +96,8 @@ public class HW2StudentAnswer implements HW2API {
     private PreparedStatement pstmtReviewsByAsinSelect;
     private PreparedStatement pstmtReviewsByIdSelect;
 
+    private static String META_PRODUCTS_PATH = "\"HW2/data/meta_Office_Products.json\"";
+    private static String REVIEWS_PRODUCTS_PATH = "\"HW2/data/reviews_Office_Products.json\"";
 
     @Override
     public void connect(String pathAstraDBBundleFile, String username, String password, String keyspace) {
@@ -174,8 +182,29 @@ public class HW2StudentAnswer implements HW2API {
     @Override
     public void loadReviews(String pathReviewsFile) throws Exception {
         //TODO: implement this function
-        System.out.println("TODO: implement this function...");
-    }
+		int count = 10000;
+		int maxThreads = 250;
+
+		// creating the thread factors
+		ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
+
+		for (int i = 0; i < count; i++) {
+			final int x = i;
+			executor.execute(new Runnable() {
+				@Override
+				public void run() {
+					BoundStatement bstmt = pstmtReviewsByAsinInsert.bind()
+							.setLong(0, 123);
+//							.setInstant(1, Instant.ofEpochMilli(ts))
+
+					session.execute(bstmt);
+					System.out.println("version 3 - added " + x + "/" + count);
+				}
+			});
+		}
+		executor.shutdown();
+		executor.awaitTermination(1, TimeUnit.HOURS);
+	}
 
     @Override
     public void item(String asin) {
@@ -296,5 +325,19 @@ public class HW2StudentAnswer implements HW2API {
                         ", rating: " + row.getInt(4) +
                         ", summary: " + row.getString(5) +
                         ", reviewText: " + row.getString(6));
+    }
+    public static void parseData(String file_path) {
+        ArrayList<JSONObject> items = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(file_path))) {
+            String line;
+            while((line = br.readLine()) != null)
+                items.add(new JSONObject(br.readLine()));
+
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 }
