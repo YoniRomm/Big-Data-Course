@@ -184,8 +184,9 @@ public class HW2StudentAnswer implements HW2API {
         //TODO: implement this function
 		int count = 10000;
 		int maxThreads = 250;
+        ArrayList<JSONObject> reviews = parseData(REVIEWS_PRODUCTS_PATH);
 
-		// creating the thread factors
+        // creating the thread factors
 		ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
 
 		for (int i = 0; i < count; i++) {
