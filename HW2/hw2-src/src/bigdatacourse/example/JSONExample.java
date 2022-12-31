@@ -3,6 +3,13 @@ package bigdatacourse.example;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+
 public class JSONExample {
 
 	public static void main(String[] args) {
@@ -42,8 +49,8 @@ public class JSONExample {
 		
 		System.out.println(main);
 		System.out.println(main.toString(4));
-		 
-		
+
 	}
+
 
 }
