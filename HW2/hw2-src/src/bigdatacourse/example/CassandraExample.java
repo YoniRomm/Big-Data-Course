@@ -52,14 +52,14 @@ public class CassandraExample {
 	public static void test() {
 		// creating the session
 		CqlSession session = getCassandraSession(
-			"/Users/boim/Documents/astradb.zip",		// secure connect bundle path, change the path
-			"clientID",									// found in GeneratedToken.csv
-			"clientSecret",								// found in GeneratedToken.csv
+			"HW2/hw2-src/astradb/astradb.zip",		// secure connect bundle path, change the path
+			"fwSLcUDDqmSPwRNyqiTyJIZf",									// found in GeneratedToken.csv
+			"mHMs_uWFhkogJiCgFuTapDudLFmn7aGQR,UQ7n-3UpX1a7qwOP,y-wS89vhMFpUCbLQggB9FqGDo2.Zig4MCFaF8R7HGSYkSHLPrnn2v9b_Yhe+wn54bR,ZBMAiAPa3D",								// found in GeneratedToken.csv
 			"bigdatacourse");
 
 	
 		// creating the table
-		exampleCreateTable(session);
+//		exampleCreateTable(session);
 
 //		// creating the prepared statements
 		PreparedStatement pstmtAdd 		= 	session.prepare(CQL_USER_VIEW_INSERT);
@@ -73,39 +73,39 @@ public class CassandraExample {
 		int duration	=	184;
 		
 		// insert #1
-		exampleInsertVer1(session, user_id, ts, video_id, device, duration);
-		System.out.println("exampleInsertVer1 - complete");
+//		exampleInsertVer1(session, user_id, ts, video_id, device, duration);
+//		System.out.println("exampleInsertVer1 - complete");
 		
 		// insert #1 string syntax problem (and query injection)
-		device = "iP'hone";
-		System.out.println("exampleInsertVer1 - BUG");
-		exampleInsertVer1(session, user_id, ts, video_id, device, duration);
+//		device = "iP'hone";
+//		System.out.println("exampleInsertVer1 - BUG");
+//		exampleInsertVer1(session, user_id, ts, video_id, device, duration);
 		
 		
 		// insert #2
-		device = "iP'hone";
-		exampleInsertVer2(session, user_id, ts, video_id, device, duration);
-		System.out.println("exampleInsertVer2 - complete");
-		
-		// insert #3
-		exampleInsertVer3(session, pstmtAdd, user_id, ts, video_id, device, duration, false);
-		System.out.println("exampleInsertVer3 - complete");
-		
-		// insert - speed comparison
-		exampleInsertSpeed(session, pstmtAdd, user_id, ts, video_id, device, duration);
-		System.out.println("exampleInsertSpeed - complete");
-
-		// insert - speed comparison (threads)
-		try {
-			exampleInsertSpeedThreads(session, pstmtAdd, user_id, ts, video_id, device, duration);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		System.out.println("exampleInsertSpeedThreads - complete");
-		
-		// insert - speed comparison (async)
-		exampleInsertSpeedAsync(session, pstmtAdd, user_id, ts, video_id, device, duration);
-		System.out.println("exampleInsertSpeedAsync - complete (NOTE - some may be dropped due to AstraDB limits");
+//		device = "iP'hone";
+//		exampleInsertVer2(session, user_id, ts, video_id, device, duration);
+//		System.out.println("exampleInsertVer2 - complete");
+//
+//		// insert #3
+//		exampleInsertVer3(session, pstmtAdd, user_id, ts, video_id, device, duration, false);
+//		System.out.println("exampleInsertVer3 - complete");
+//
+//		// insert - speed comparison
+//		exampleInsertSpeed(session, pstmtAdd, user_id, ts, video_id, device, duration);
+//		System.out.println("exampleInsertSpeed - complete");
+//
+//		// insert - speed comparison (threads)
+//		try {
+//			exampleInsertSpeedThreads(session, pstmtAdd, user_id, ts, video_id, device, duration);
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
+//		System.out.println("exampleInsertSpeedThreads - complete");
+//
+//		// insert - speed comparison (async)
+//		exampleInsertSpeedAsync(session, pstmtAdd, user_id, ts, video_id, device, duration);
+//		System.out.println("exampleInsertSpeedAsync - complete (NOTE - some may be dropped due to AstraDB limits");
 		
 		// select #1
 		exampleSelectVer1(session, user_id);
