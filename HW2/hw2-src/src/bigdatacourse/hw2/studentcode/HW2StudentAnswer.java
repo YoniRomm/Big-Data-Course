@@ -4,11 +4,10 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.file.Paths;
+import java.sql.Array;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -28,11 +27,11 @@ import org.json.JSONObject;
 
 public class HW2StudentAnswer implements HW2API {
 
-    public class Items {
+    public class Item {
 
         private final JSONObject json;
 
-        public Items(JSONObject json) {
+        public Item(JSONObject json) {
             this.json = json;
         }
 
@@ -84,6 +83,65 @@ public class HW2StudentAnswer implements HW2API {
         }
 
     }
+    public class Review {
+
+        private final JSONObject json;
+        public Review(JSONObject json) {
+            this.json = json;
+        }
+        public Instant getTime() {
+            try {
+                return Instant.ofEpochSecond(json.getLong("unixReviewTime"));
+            } catch (JSONException e) {
+                return Instant.ofEpochSecond(0); // TODO CHECK NOT AVAILABLE VALUE FOR INSTANT
+            }
+        }
+        public String getAsin() {
+            try {
+                return json.getString("asin");
+            } catch (JSONException e) {
+                return NOT_AVAILABLE_VALUE;
+            }
+        }
+
+        public String getReviewerID() {
+            try {
+                return json.getString("reviewerID");
+            } catch (JSONException e) {
+                return NOT_AVAILABLE_VALUE;
+            }
+        }
+
+        public String getReviewerName() {
+            try {
+                return json.getString("reviewerName");
+            } catch (JSONException e) {
+                return NOT_AVAILABLE_VALUE;
+            }
+        }
+
+        public double getRating() {
+            try {
+                return json.getDouble("overall");
+            } catch (JSONException e) {
+                return -1;  // TODO CHECK NOT AVAILABLE VALUE FOR INT
+            }
+        }
+        public String getSummary() {
+            try {
+                return json.getString("summary");
+            } catch (JSONException e) {
+                return NOT_AVAILABLE_VALUE;
+            }
+        }
+        public String getReviewText() {
+            try {
+                return json.getString("reviewText");
+            } catch (JSONException e) {
+                return NOT_AVAILABLE_VALUE;
+            }
+        }
+    }
 
     // general consts
 
@@ -101,15 +159,19 @@ public class HW2StudentAnswer implements HW2API {
 
     private static final String CQL_REVIEWS_BY_ASIN_INSERT =
             "INSERT INTO " + TABLE_REVIEWS_BY_ASIN_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
+    private static final String REVIEW_SELECT_COLUMNS="time, asin, reviewerID,reviewerName, rating, summary, reviewText" ;
 
     private static final String CQL_REVIEWS_BY_ASIN_SELECT =
-            "SELECT * FROM " + TABLE_REVIEWS_BY_ASIN_NAME + " WHERE asin = ?";
+            "SELECT "+REVIEW_SELECT_COLUMNS+" FROM " + TABLE_REVIEWS_BY_ASIN_NAME + " WHERE asin = ?";
 
     private static final String CQL_REVIEWS_BY_REVIEWER_ID_INSERT =
             "INSERT INTO " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
 
+
+
+
     private static final String CQL_REVIEWS_BY_REVIEWER_ID_SELECT =
-            "SELECT * FROM " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + " WHERE reviewerID = ?";
+            "SELECT "+REVIEW_SELECT_COLUMNS+" FROM " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + " WHERE reviewerID = ?";
 
     // CQL stuff
 
@@ -124,11 +186,11 @@ public class HW2StudentAnswer implements HW2API {
                     ") ";
 
     private static final String TABLE_REVIEWS_COLUMNS =
-            "time timestamp," +
+                    "time timestamp," +
                     "asin text," +
                     "reviewerID text," +
-                    "reviewerName int," +
-                    "rating int," +
+                    "reviewerName text," +
+                    "rating double," +
                     "summary text," +
                     "reviewText text,";
     private static final String CQL_CREATE_TABLE_REVIEWS_BY_ASIN =
@@ -158,6 +220,7 @@ public class HW2StudentAnswer implements HW2API {
     private PreparedStatement pstmtReviewsByAsinSelect;
     private PreparedStatement pstmtReviewsByIdSelect;
 
+    private static PreparedStatement[]  reviewsPSTMT;
     private static String META_PRODUCTS_PATH = "\"HW2/data/meta_Office_Products.json\"";
     private static String REVIEWS_PRODUCTS_PATH = "\"HW2/data/reviews_Office_Products.json\"";
 
@@ -195,7 +258,7 @@ public class HW2StudentAnswer implements HW2API {
 
     @Override
     public void createTables() {
-        session.execute(CQL_CREATE_TABLE_ITEMS);
+//        session.execute(CQL_CREATE_TABLE_ITEMS);
         session.execute(CQL_CREATE_TABLE_REVIEWS_BY_ASIN);
         session.execute(CQL_CREATE_TABLE_REVIEWS_BY_REVIEWER_ID);
         System.out.printf("created tables: %s, %s, %s\n", TABLE_ITEMS_NAME, TABLE_REVIEWS_BY_REVIEWER_ID_NAME, TABLE_REVIEWS_BY_ASIN_NAME);
@@ -209,6 +272,7 @@ public class HW2StudentAnswer implements HW2API {
         pstmtItemsSelect = session.prepare(CQL_ITEMS_SELECT);
         pstmtReviewsByAsinSelect = session.prepare(CQL_REVIEWS_BY_ASIN_SELECT);
         pstmtReviewsByIdSelect = session.prepare(CQL_REVIEWS_BY_REVIEWER_ID_SELECT);
+        reviewsPSTMT = new PreparedStatement[] {pstmtReviewsByAsinInsert,pstmtReviewsByIdInsert};
     }
 
     @Override
@@ -216,15 +280,15 @@ public class HW2StudentAnswer implements HW2API {
         // creating the thread factors
         ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
 
-        ArrayList<JSONObject> reviews = parseData(pathItemsFile);
+        ArrayList<JSONObject> json_items = parseData(pathItemsFile);
 
-        for (JSONObject json : reviews) {
+        for (JSONObject json_item : json_items) {
 
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
 //                    System.out.println("categories: " + new HashSet<String>(Arrays.asList("Notebooks & Writing Pads", "Office & School Supplies", "Office Products", "Paper")));
-                    Items item = new Items(json);
+                    Item item = new Item(json_item);
 
                     BoundStatement bstmt = pstmtItemsInsert.bind(
                             item.getAsin(),
@@ -248,24 +312,29 @@ public class HW2StudentAnswer implements HW2API {
 
     @Override
     public void loadReviews(String pathReviewsFile) throws Exception {
-        //TODO: implement this function
-        int count = 10000;
-        ArrayList<JSONObject> reviews = parseData(REVIEWS_PRODUCTS_PATH);
-
         // creating the thread factors
         ExecutorService executor = Executors.newFixedThreadPool(MAX_THREADS);
 
-        for (int i = 0; i < count; i++) {
-            final int x = i;
+        ArrayList<JSONObject> reviews = parseData(pathReviewsFile);
+
+        for (JSONObject json_review : reviews) {
+
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    BoundStatement bstmt = pstmtReviewsByAsinInsert.bind()
-                            .setLong(0, 123);
-//							.setInstant(1, Instant.ofEpochMilli(ts))
-
-                    session.execute(bstmt);
-                    System.out.println("version 3 - added " + x + "/" + count);
+//                    System.out.println("categories: " + new HashSet<String>(Arrays.asList("Notebooks & Writing Pads", "Office & School Supplies", "Office Products", "Paper")));
+                    Review item = new Review(json_review);
+                    for (PreparedStatement pstmt : reviewsPSTMT) {
+                        BoundStatement bstmt = pstmt.bind(
+                                item.getTime(),
+                                item.getAsin(),
+                                item.getReviewerID(),
+                                item.getReviewerName(),
+                                item.getRating(),
+                                item.getSummary(),
+                                item.getReviewText());
+                        session.execute(bstmt);
+                    }
                 }
             });
         }
@@ -394,7 +463,7 @@ public class HW2StudentAnswer implements HW2API {
     public void printReview(Row row) {
         //TODO: change time
         System.out.println(
-                "time: " + Instant.ofEpochSecond(1362614400) +
+                        "time: " + row.getInstant(0) +
                         ", asin: " + row.getString(1) +
                         ", reviewerID: " + row.getString(2) +
                         ", reviewerName: " + row.getString(3) +
