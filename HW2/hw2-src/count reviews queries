@@ -1,0 +1,8 @@
+B000I97FHY
+B002B3YBYU
+B004NTXG0K
+
+ select count(*) from reviews_by_asin where asin<='B000I97FHY' ALLOW FILTERING;
+  select count(*) from reviews_by_asin where asin>'B000I97FHY' and asin <='B002B3YBYU' ALLOW FILTERING;
+  select count(*) from reviews_by_asin where asin>'B002B3YBYU' and asin <='B004NTXG0K' ALLOW FILTERING;
+ select count(*) from reviews_by_asin where asin>'B004NTXG0K' ALLOW FILTERING;
