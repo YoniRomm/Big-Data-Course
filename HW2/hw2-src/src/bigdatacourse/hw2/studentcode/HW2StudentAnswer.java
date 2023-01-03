@@ -5,11 +5,10 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.sql.Array;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -61,16 +60,20 @@ public class HW2StudentAnswer implements HW2API {
 
         public Set<String> getCategories() {
             try {
-                JSONArray arr = json.getJSONArray("categories");
-                arr = arr.getJSONArray(0);
+                JSONArray categoriesOuter = json.getJSONArray("categories");
+                ArrayList<String> list = new ArrayList<>();
 
-                ArrayList<String> list = new ArrayList<String>();
-                for (int i = 0; i < arr.length(); i++) {
-                    list.add(arr.getString(i));
+                for (int j = 0; j < categoriesOuter.length(); j++) {
+                    JSONArray categoriesInner = categoriesOuter.getJSONArray(j);
+
+                    for (int i = 0; i < categoriesInner.length(); i++) {
+                        list.add(categoriesInner.getString(i));
+                    }
                 }
-                return new HashSet<>(list);
+
+                return new TreeSet<>(list);
             } catch (JSONException e) {
-                return new HashSet<>();
+                return new TreeSet<>();
             }
         }
 
@@ -124,9 +127,9 @@ public class HW2StudentAnswer implements HW2API {
             }
         }
 
-        public double getRating() {
+        public int getRating() {
             try {
-                return json.getDouble("overall");
+                return json.getInt("overall");
             } catch (JSONException e) {
                 return -1;  // TODO CHECK NOT AVAILABLE VALUE FOR INT
             }
@@ -193,7 +196,7 @@ public class HW2StudentAnswer implements HW2API {
                     "asin text," +
                     "reviewerID text," +
                     "reviewerName text," +
-                    "rating double," +
+                    "rating int," +
                     "summary text," +
                     "reviewText text,";
     private static final String CQL_CREATE_TABLE_REVIEWS_BY_ASIN =
@@ -261,7 +264,7 @@ public class HW2StudentAnswer implements HW2API {
 
     @Override
     public void createTables() {
-//        session.execute(CQL_CREATE_TABLE_ITEMS);
+        session.execute(CQL_CREATE_TABLE_ITEMS);
         session.execute(CQL_CREATE_TABLE_REVIEWS_BY_ASIN);
         session.execute(CQL_CREATE_TABLE_REVIEWS_BY_REVIEWER_ID);
         System.out.printf("created tables: %s, %s, %s\n", TABLE_ITEMS_NAME, TABLE_REVIEWS_BY_REVIEWER_ID_NAME, TABLE_REVIEWS_BY_ASIN_NAME);
@@ -463,7 +466,6 @@ public class HW2StudentAnswer implements HW2API {
     }
 
     public void printReview(Row row) {
-        //TODO: change time
         System.out.println(
                 "time: " + row.getInstant(0) +
                         ", asin: " + row.getString(1) +
