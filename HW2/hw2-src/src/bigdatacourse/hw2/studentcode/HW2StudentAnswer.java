@@ -83,12 +83,15 @@ public class HW2StudentAnswer implements HW2API {
         }
 
     }
+
     public class Review {
 
         private final JSONObject json;
+
         public Review(JSONObject json) {
             this.json = json;
         }
+
         public Instant getTime() {
             try {
                 return Instant.ofEpochSecond(json.getLong("unixReviewTime"));
@@ -96,6 +99,7 @@ public class HW2StudentAnswer implements HW2API {
                 return Instant.ofEpochSecond(0); // TODO CHECK NOT AVAILABLE VALUE FOR INSTANT
             }
         }
+
         public String getAsin() {
             try {
                 return json.getString("asin");
@@ -127,6 +131,7 @@ public class HW2StudentAnswer implements HW2API {
                 return -1;  // TODO CHECK NOT AVAILABLE VALUE FOR INT
             }
         }
+
         public String getSummary() {
             try {
                 return json.getString("summary");
@@ -134,6 +139,7 @@ public class HW2StudentAnswer implements HW2API {
                 return NOT_AVAILABLE_VALUE;
             }
         }
+
         public String getReviewText() {
             try {
                 return json.getString("reviewText");
@@ -159,19 +165,16 @@ public class HW2StudentAnswer implements HW2API {
 
     private static final String CQL_REVIEWS_BY_ASIN_INSERT =
             "INSERT INTO " + TABLE_REVIEWS_BY_ASIN_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
-    private static final String REVIEW_SELECT_COLUMNS="time, asin, reviewerID,reviewerName, rating, summary, reviewText" ;
+    private static final String REVIEW_SELECT_COLUMNS = "time, asin, reviewerID,reviewerName, rating, summary, reviewText";
 
     private static final String CQL_REVIEWS_BY_ASIN_SELECT =
-            "SELECT "+REVIEW_SELECT_COLUMNS+" FROM " + TABLE_REVIEWS_BY_ASIN_NAME + " WHERE asin = ?";
+            "SELECT " + REVIEW_SELECT_COLUMNS + " FROM " + TABLE_REVIEWS_BY_ASIN_NAME + " WHERE asin = ?";
 
     private static final String CQL_REVIEWS_BY_REVIEWER_ID_INSERT =
             "INSERT INTO " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + "(time, asin, reviewerID, reviewerName, rating, summary, reviewText) VALUES(?, ?, ?, ?, ?, ?, ?)";
 
-
-
-
     private static final String CQL_REVIEWS_BY_REVIEWER_ID_SELECT =
-            "SELECT "+REVIEW_SELECT_COLUMNS+" FROM " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + " WHERE reviewerID = ?";
+            "SELECT " + REVIEW_SELECT_COLUMNS + " FROM " + TABLE_REVIEWS_BY_REVIEWER_ID_NAME + " WHERE reviewerID = ?";
 
     // CQL stuff
 
@@ -186,7 +189,7 @@ public class HW2StudentAnswer implements HW2API {
                     ") ";
 
     private static final String TABLE_REVIEWS_COLUMNS =
-                    "time timestamp," +
+            "time timestamp," +
                     "asin text," +
                     "reviewerID text," +
                     "reviewerName text," +
@@ -220,7 +223,7 @@ public class HW2StudentAnswer implements HW2API {
     private PreparedStatement pstmtReviewsByAsinSelect;
     private PreparedStatement pstmtReviewsByIdSelect;
 
-    private static PreparedStatement[]  reviewsPSTMT;
+    private static PreparedStatement[] reviewsPSTMT;
     private static String META_PRODUCTS_PATH = "\"HW2/data/meta_Office_Products.json\"";
     private static String REVIEWS_PRODUCTS_PATH = "\"HW2/data/reviews_Office_Products.json\"";
 
@@ -272,7 +275,7 @@ public class HW2StudentAnswer implements HW2API {
         pstmtItemsSelect = session.prepare(CQL_ITEMS_SELECT);
         pstmtReviewsByAsinSelect = session.prepare(CQL_REVIEWS_BY_ASIN_SELECT);
         pstmtReviewsByIdSelect = session.prepare(CQL_REVIEWS_BY_REVIEWER_ID_SELECT);
-        reviewsPSTMT = new PreparedStatement[] {pstmtReviewsByAsinInsert,pstmtReviewsByIdInsert};
+        reviewsPSTMT = new PreparedStatement[]{pstmtReviewsByAsinInsert, pstmtReviewsByIdInsert};
     }
 
     @Override
@@ -463,7 +466,7 @@ public class HW2StudentAnswer implements HW2API {
     public void printReview(Row row) {
         //TODO: change time
         System.out.println(
-                        "time: " + row.getInstant(0) +
+                "time: " + row.getInstant(0) +
                         ", asin: " + row.getString(1) +
                         ", reviewerID: " + row.getString(2) +
                         ", reviewerName: " + row.getString(3) +
