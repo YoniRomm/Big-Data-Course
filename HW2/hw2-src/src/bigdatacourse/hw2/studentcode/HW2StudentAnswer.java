@@ -99,7 +99,7 @@ public class HW2StudentAnswer implements HW2API {
             try {
                 return Instant.ofEpochSecond(json.getLong("unixReviewTime"));
             } catch (JSONException e) {
-                return Instant.ofEpochSecond(0); // TODO CHECK NOT AVAILABLE VALUE FOR INSTANT
+                return Instant.ofEpochSecond(0);
             }
         }
 
@@ -131,7 +131,7 @@ public class HW2StudentAnswer implements HW2API {
             try {
                 return json.getInt("overall");
             } catch (JSONException e) {
-                return -1;  // TODO CHECK NOT AVAILABLE VALUE FOR INT
+                return -1;
             }
         }
 
@@ -227,8 +227,6 @@ public class HW2StudentAnswer implements HW2API {
     private PreparedStatement pstmtReviewsByIdSelect;
 
     private static PreparedStatement[] reviewsPSTMT;
-    private static String META_PRODUCTS_PATH = "\"HW2/data/meta_Office_Products.json\"";
-    private static String REVIEWS_PRODUCTS_PATH = "\"HW2/data/reviews_Office_Products.json\"";
 
     @Override
     public void connect(String pathAstraDBBundleFile, String username, String password, String keyspace) {
